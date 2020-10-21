@@ -1,0 +1,107 @@
+//import QtQuick.Dialogs 1.1
+
+import Qt3D.Core 2.15
+import QtQuick3D.Helpers 1.15
+
+//import QtQuick.Scene3D 2.15
+
+import Qt3D.Render 2.15
+//import Qt3D.Input 2.15
+import Qt3D.Extras 2.15
+import QtQuick 2.15
+import QtQuick.Window 2.15
+import QtQuick3D 1.15
+import QtQuick.Controls 2.15
+import customgeometry 1.0
+
+Window {
+    id: window
+    width: 1280
+    height: 720
+    visible: true
+    color: "#848895"
+
+    View3D {
+        id: v3d
+        anchors.fill: parent
+        camera: camera
+
+         PerspectiveCamera {
+            id: camera
+            fieldOfView: 45
+            clipNear: 0.1
+            clipFar: 1000.0
+            x: 0
+            y: 0
+            z: 600
+        }
+
+        DirectionalLight {
+            position: Qt.vector3d(-500, 500, -100)
+            color: Qt.rgba(0.4, 0.2, 0.6, 1.0)
+            ambientColor: Qt.rgba(0.1, 0.1, 0.1, 1.0)
+        }
+
+        PointLight {
+            position: Qt.vector3d(0, 0, 100)
+            color: Qt.rgba(0.1, 1.0, 0.1, 1.0)
+            ambientColor: Qt.rgba(0.2, 0.2, 0.2, 1.0)
+        }
+
+        Model {
+            visible: radioGridGeom.checked
+            scale: Qt.vector3d(100, 100, 100)
+            geometry: GridGeometry {
+                id: grid
+                horizontalLines: 20
+                verticalLines: 20
+            }
+            materials: [
+                DefaultMaterial {
+                    lineWidth: sliderLineWidth.value
+                }
+            ]
+        }
+
+        Model {
+            visible: radioCustGeom.checked
+            scale: Qt.vector3d(100, 100, 100)
+            geometry: ExampleTriangleGeometry {
+                normals: cbNorm.checked
+                normalXY: sliderNorm.value
+                uv: cbUV.checked
+                uvAdjust: sliderUV.value
+            }
+//            source: "#Sphere"
+            materials: [
+                DefaultMaterial {
+                    Texture {
+                        id: baseColorMap
+                        source: "qt_logo_rect.png"
+                    }
+                    cullMode: DefaultMaterial.NoCulling
+                    diffuseMap: cbTexture.checked ? baseColorMap : null
+                    specularAmount: 0.5
+                }
+            ]
+        }
+
+        Model {
+            visible: radioPointGeom.checked
+            scale: Qt.vector3d(100, 100, 100)
+            geometry: ExamplePointGeometry { }
+            materials: [
+                DefaultMaterial {
+                    lighting: DefaultMaterial.NoLighting
+                    cullMode: DefaultMaterial.NoCulling
+                    diffuseColor: "yellow"
+//                    pointSize: sliderPointSize.value
+                }
+            ]
+        }
+    }
+
+    WasdController {
+        controlledObject: camera
+    }
+}
