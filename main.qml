@@ -33,7 +33,7 @@ Window {
             clipFar: 1000.0
             x: 0
             y: 0
-            z: 600
+            z: 200
         }
 
         DirectionalLight {
@@ -65,7 +65,7 @@ Window {
 
         Model {
             visible: radioCustGeom.checked
-            scale: Qt.vector3d(100, 100, 100)
+            scale: Qt.vector3d(1, 1, 1)
             geometry: ExampleTriangleGeometry {
                 normals: cbNorm.checked
                 normalXY: sliderNorm.value

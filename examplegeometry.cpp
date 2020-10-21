@@ -14,7 +14,6 @@
 
 //#include "assimphelpers.h"
 
-static const aiScene* scene;
 static bool isAssimpReadDone = false;
 
 void DoTheErrorLogging(const std::string&& pError)
@@ -22,7 +21,7 @@ void DoTheErrorLogging(const std::string&& pError)
 	std::cout << pError << std::endl;
 }
 
-void DoTheSceneProcessing(const aiScene* scene)
+void LogMeshes(const aiScene* scene)
 {
 	std::cout << "DoTheSceneProcessing(), numMeshes:                       " << scene->mNumMeshes << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumVertices: " << scene->mMeshes[0]->mNumVertices << std::endl;
@@ -47,7 +46,7 @@ bool DoTheImportThing(const std::string& pFile)
 		return false;
 	}
 
-	DoTheSceneProcessing(scene);
+	LogMeshes(scene);
 
 	isAssimpReadDone = true;
 	// We're done. Everything will be cleaned up by the importer destructor
@@ -108,22 +107,41 @@ void ExampleTriangleGeometry::updateData()
     if (isAssimpReadDone)
 		return;
 
-    if(DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
-    {
-		// Now we can access the file's contents.
-//		DoTheSceneProcessing(scene);
-    }
+    // Create an instance of the Importer class
+	Assimp::Importer importer;
+	// And have it read the given file with some example postprocessing
+	// Usually - if speed is not the most important aspect for you - you'll
+	// probably to request more postprocessing than we do in this example.
+	const aiScene* scene = importer.ReadFile("C:/ProjectsData/stl_files/mandoblasterlow.stl",
+							  aiProcess_CalcTangentSpace |
+							  aiProcess_Triangulate |
+							  aiProcess_JoinIdenticalVertices |
+							  aiProcess_SortByPType);
+	// If the import failed, report it
+	if(!scene)
+	{
+		DoTheErrorLogging(std::string(importer.GetErrorString()));
+		return;
+	}
 
 	clear();
 
+	LogMeshes(scene);
+
     int stride = 3 * sizeof(float);
     if (m_hasNormals)
+    {
         stride += 3 * sizeof(float);
+    }
     if (m_hasUV)
+    {
         stride += 2 * sizeof(float);
+    }
+
+	unsigned numMeshVertices = scene->mMeshes[0]->mNumVertices;
 
     QByteArray v;
-    v.resize(3 * stride);
+    v.resize(numMeshVertices * stride);
     float *p = reinterpret_cast<float *>(v.data());
 
     // a triangle, front face = counter-clockwise
@@ -150,9 +168,13 @@ void ExampleTriangleGeometry::updateData()
 //    }
 
 // a triangle, front face = counter-clockwise
-    *p++ = -1.0f; *p++ = -1.0f; *p++ = 0.0f;
-    *p++ = 1.0f; *p++ = -1.0f; *p++ = 0.0f;
-    *p++ = 0.0f; *p++ = 1.0f; *p++ = 0.0f;
+
+	for (unsigned i = 0; i < numMeshVertices; ++i)
+	{
+		*p++ = scene->mMeshes[0]->mVertices[i].x;
+		*p++ = scene->mMeshes[0]->mVertices[i].y;
+		*p++ = scene->mMeshes[0]->mVertices[i].z;
+	}
 
     setVertexData(v);
     setStride(stride);
@@ -176,6 +198,7 @@ void ExampleTriangleGeometry::updateData()
     }
 
     std::cout << " ########## DATA UPDATE IN " << __FUNCTION__ << std::endl;
+    isAssimpReadDone = true;
 }
 
 ExamplePointGeometry::ExamplePointGeometry()
