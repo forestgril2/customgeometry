@@ -15,6 +15,9 @@
 //#include "assimphelpers.h"
 
 static bool isAssimpReadDone = false;
+// Create an instance of the Importer class
+static Assimp::Importer importer;
+static const aiScene* scene;
 
 void DoTheErrorLogging(const std::string&& pError)
 {
@@ -24,17 +27,16 @@ void DoTheErrorLogging(const std::string&& pError)
 void LogMeshes(const aiScene* scene)
 {
 	std::cout << "DoTheSceneProcessing(), numMeshes:                       " << scene->mNumMeshes << std::endl;
+	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumFaces:    " << scene->mMeshes[0]->mNumFaces << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumVertices: " << scene->mMeshes[0]->mNumVertices << std::endl;
 }
 
 bool DoTheImportThing(const std::string& pFile)
 {
-	// Create an instance of the Importer class
-	Assimp::Importer importer;
 	// And have it read the given file with some example postprocessing
 	// Usually - if speed is not the most important aspect for you - you'll
 	// probably to request more postprocessing than we do in this example.
-	const aiScene* scene = importer.ReadFile(pFile,
+	scene = importer.ReadFile(pFile,
 							  aiProcess_CalcTangentSpace |
 							  aiProcess_Triangulate |
 							  aiProcess_JoinIdenticalVertices |
@@ -107,22 +109,8 @@ void ExampleTriangleGeometry::updateData()
     if (isAssimpReadDone)
 		return;
 
-    // Create an instance of the Importer class
-	Assimp::Importer importer;
-	// And have it read the given file with some example postprocessing
-	// Usually - if speed is not the most important aspect for you - you'll
-	// probably to request more postprocessing than we do in this example.
-	const aiScene* scene = importer.ReadFile("C:/ProjectsData/stl_files/mandoblasterlow.stl",
-							  aiProcess_CalcTangentSpace |
-							  aiProcess_Triangulate |
-							  aiProcess_JoinIdenticalVertices |
-							  aiProcess_SortByPType);
-	// If the import failed, report it
-	if(!scene)
-	{
-		DoTheErrorLogging(std::string(importer.GetErrorString()));
+	if (!DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
 		return;
-	}
 
 	clear();
 
@@ -139,9 +127,10 @@ void ExampleTriangleGeometry::updateData()
     }
 
 	unsigned numMeshVertices = scene->mMeshes[0]->mNumVertices;
+	unsigned numMeshFaces = scene->mMeshes[0]->mNumFaces;
 
     QByteArray v;
-    v.resize(numMeshVertices * stride);
+    v.resize(3 * numMeshFaces * stride);
     float *p = reinterpret_cast<float *>(v.data());
 
     // a triangle, front face = counter-clockwise
@@ -169,11 +158,30 @@ void ExampleTriangleGeometry::updateData()
 
 // a triangle, front face = counter-clockwise
 
-	for (unsigned i = 0; i < numMeshVertices; ++i)
+	for (unsigned i = 0; i < numMeshFaces; ++i)
 	{
-		*p++ = scene->mMeshes[0]->mVertices[i].x;
-		*p++ = scene->mMeshes[0]->mVertices[i].y;
-		*p++ = scene->mMeshes[0]->mVertices[i].z;
+		const aiFace& face = scene->mMeshes[0]->mFaces[i];
+
+		if (face.mNumIndices != 3)
+		{
+			std::cout << "#### WARNING! face.mNumIndices != 3, but " << face.mNumIndices << std::endl;
+		}
+
+		const unsigned indexA = face.mIndices[0];
+		const unsigned indexB = face.mIndices[1];
+		const unsigned indexC = face.mIndices[2];
+
+		*p++ = scene->mMeshes[0]->mVertices[indexA].x;
+		*p++ = scene->mMeshes[0]->mVertices[indexA].y;
+		*p++ = scene->mMeshes[0]->mVertices[indexA].z;
+
+		*p++ = scene->mMeshes[0]->mVertices[indexB].x;
+		*p++ = scene->mMeshes[0]->mVertices[indexB].y;
+		*p++ = scene->mMeshes[0]->mVertices[indexB].z;
+
+		*p++ = scene->mMeshes[0]->mVertices[indexC].x;
+		*p++ = scene->mMeshes[0]->mVertices[indexC].y;
+		*p++ = scene->mMeshes[0]->mVertices[indexC].z;
 	}
 
     setVertexData(v);
