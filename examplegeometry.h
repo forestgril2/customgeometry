@@ -11,6 +11,7 @@ class ExampleTriangleGeometry : public QQuick3DGeometry
     Q_PROPERTY(float normalXY READ normalXY WRITE setNormalXY NOTIFY normalXYChanged)
     Q_PROPERTY(bool uv READ uv WRITE setUV NOTIFY uvChanged)
     Q_PROPERTY(float uvAdjust READ uvAdjust WRITE setUVAdjust NOTIFY uvAdjustChanged)
+	Q_PROPERTY(float warp READ warp WRITE setWarp NOTIFY warpChanged)
 	QML_NAMED_ELEMENT(ExampleTriangleGeometry)
 
 public:
@@ -28,11 +29,15 @@ public:
     float uvAdjust() const { return m_uvAdjust; }
     void setUVAdjust(float f);
 
+    float warp() const { return _warp;}
+    void setWarp(float warp);
+
 signals:
     void normalsChanged();
     void normalXYChanged();
     void uvChanged();
     void uvAdjustChanged();
+    void warpChanged();
 
 private:
     void updateData();
@@ -41,6 +46,7 @@ private:
     float m_normalXY = 0.0f;
     bool m_hasUV = false;
     float m_uvAdjust = 0.0f;
+    float _warp = 0.0f;
 };
 
 class ExamplePointGeometry : public QQuick3DGeometry

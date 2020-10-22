@@ -104,4 +104,12 @@ Window {
     WasdController {
         controlledObject: camera
     }
+
+    Slider {
+        anchors.left: parent
+        orientation: Qt.Vertical
+        from: -1
+        to: 1
+        width: 50
+    }
 }

@@ -1,6 +1,7 @@
-
 #include "examplegeometry.h"
+
 #include <QRandomGenerator>
+#include <QVector3D>
 
 #include <cstdio>
 #include <iostream>
@@ -18,17 +19,40 @@ static bool isAssimpReadDone = false;
 // Create an instance of the Importer class
 static Assimp::Importer importer;
 static const aiScene* scene;
+static QVector3D maxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+static QVector3D minBound(FLT_MAX, FLT_MAX, FLT_MAX);
 
 void DoTheErrorLogging(const std::string&& pError)
 {
 	std::cout << pError << std::endl;
 }
 
-void LogMeshes(const aiScene* scene)
+static void LogMeshes(const aiScene* scene)
 {
 	std::cout << "DoTheSceneProcessing(), numMeshes:                       " << scene->mNumMeshes << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumFaces:    " << scene->mMeshes[0]->mNumFaces << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumVertices: " << scene->mMeshes[0]->mNumVertices << std::endl;
+}
+
+static void ReadSceneBounds(const aiScene* scene)
+{
+	const unsigned numMeshVertices = scene->mMeshes[0]->mNumVertices;
+	const float* p = &(scene->mMeshes[0]->mVertices[0].x);
+	for (unsigned i = 0; i < numMeshVertices; ++i)
+	{
+		minBound.setX(std::min(minBound.x(), *p));
+		maxBound.setX(std::max(maxBound.x(), *p));
+		++p;
+		minBound.setY(std::min(minBound.y(), *p));
+		maxBound.setY(std::max(maxBound.y(), *p));
+		++p;
+		minBound.setZ(std::min(minBound.z(), *p));
+		maxBound.setZ(std::max(maxBound.z(), *p));
+		++p;
+	}
+
+	std::cout << " ### aiScene minBound(x,y,z): [" << minBound.x() << "," << minBound.y() << "," << minBound.z() << "]" << std::endl;
+	std::cout << " ### aiScene maxBound(x,y,z): [" << maxBound.x() << "," << maxBound.y() << "," << maxBound.z() << "]" << std::endl;
 }
 
 bool DoTheImportThing(const std::string& pFile)
@@ -48,6 +72,7 @@ bool DoTheImportThing(const std::string& pFile)
 		return false;
 	}
 
+	ReadSceneBounds(scene);
 	LogMeshes(scene);
 
 	isAssimpReadDone = true;
@@ -104,17 +129,28 @@ void ExampleTriangleGeometry::setUVAdjust(float f)
     update();
 }
 
+void ExampleTriangleGeometry::setWarp(float warp)
+{
+	if (qFuzzyCompare(_warp, warp))
+		return;
+
+	_warp = warp;
+	emit warpChanged();
+	updateData();
+    update();
+}
+
 void ExampleTriangleGeometry::updateData()
 {
-    if (isAssimpReadDone)
-		return;
+	if (!isAssimpReadDone)
+	{
+		if (!DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
+			return;
 
-	if (!DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
-		return;
+		LogMeshes(scene);
+	}
 
 	clear();
-
-	LogMeshes(scene);
 
     int stride = 3 * sizeof(float);
     if (m_hasNormals)
@@ -126,7 +162,6 @@ void ExampleTriangleGeometry::updateData()
         stride += 2 * sizeof(float);
     }
 
-	unsigned numMeshVertices = scene->mMeshes[0]->mNumVertices;
 	unsigned numMeshFaces = scene->mMeshes[0]->mNumFaces;
 
     QByteArray v;
