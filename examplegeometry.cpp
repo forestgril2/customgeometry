@@ -22,37 +22,44 @@ static const aiScene* scene;
 static QVector3D maxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 static QVector3D minBound(FLT_MAX, FLT_MAX, FLT_MAX);
 
-void DoTheErrorLogging(const std::string&& pError)
+void assimpErrorLogging(const std::string&& pError)
 {
 	std::cout << pError << std::endl;
 }
 
-static void LogMeshes(const aiScene* scene)
+static void assimpLogScene(const aiScene* scene)
 {
 	std::cout << "DoTheSceneProcessing(), numMeshes:                       " << scene->mNumMeshes << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumFaces:    " << scene->mMeshes[0]->mNumFaces << std::endl;
 	std::cout << "DoTheSceneProcessing(), scene->mMeshes[0]->mNumVertices: " << scene->mMeshes[0]->mNumVertices << std::endl;
 }
 
-static void ReadSceneBounds(const aiScene* scene)
+void updateBounds(const float* vertexMatrixXCoord)
 {
-	const unsigned numMeshVertices = scene->mMeshes[0]->mNumVertices;
-	const float* p = &(scene->mMeshes[0]->mVertices[0].x);
-	for (unsigned i = 0; i < numMeshVertices; ++i)
-	{
-		minBound.setX(std::min(minBound.x(), *p));
-		maxBound.setX(std::max(maxBound.x(), *p));
-		++p;
-		minBound.setY(std::min(minBound.y(), *p));
-		maxBound.setY(std::max(maxBound.y(), *p));
-		++p;
-		minBound.setZ(std::min(minBound.z(), *p));
-		maxBound.setZ(std::max(maxBound.z(), *p));
-		++p;
-	}
+	minBound.setX(std::min(minBound.x(), *vertexMatrixXCoord));
+	maxBound.setX(std::max(maxBound.x(), *vertexMatrixXCoord));
+	++vertexMatrixXCoord;
+	minBound.setY(std::min(minBound.y(), *vertexMatrixXCoord));
+	maxBound.setY(std::max(maxBound.y(), *vertexMatrixXCoord));
+	++vertexMatrixXCoord;
+	minBound.setZ(std::min(minBound.z(), *vertexMatrixXCoord));
+	maxBound.setZ(std::max(maxBound.z(), *vertexMatrixXCoord));
+}
 
+void logBounds()
+{
 	std::cout << " ### aiScene minBound(x,y,z): [" << minBound.x() << "," << minBound.y() << "," << minBound.z() << "]" << std::endl;
 	std::cout << " ### aiScene maxBound(x,y,z): [" << maxBound.x() << "," << maxBound.y() << "," << maxBound.z() << "]" << std::endl;
+}
+
+static void assimpReadMeshBounds(const aiScene* scene, const unsigned meshIndex = 0u)
+{
+	const unsigned numMeshVertices = scene->mMeshes[meshIndex]->mNumVertices;
+	for (unsigned i = 0; i < numMeshVertices; ++i)
+	{
+		updateBounds(&(scene->mMeshes[meshIndex]->mVertices[i].x));
+	}
+	logBounds();
 }
 
 bool DoTheImportThing(const std::string& pFile)
@@ -68,12 +75,12 @@ bool DoTheImportThing(const std::string& pFile)
 	// If the import failed, report it
 	if(!scene)
 	{
-		DoTheErrorLogging(std::string(importer.GetErrorString()));
+		assimpErrorLogging(std::string(importer.GetErrorString()));
 		return false;
 	}
 
-	ReadSceneBounds(scene);
-	LogMeshes(scene);
+	assimpReadMeshBounds(scene);
+	assimpLogScene(scene);
 
 	isAssimpReadDone = true;
 	// We're done. Everything will be cleaned up by the importer destructor
@@ -147,7 +154,7 @@ void ExampleTriangleGeometry::updateData()
 		if (!DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
 			return;
 
-		LogMeshes(scene);
+		assimpLogScene(scene);
 	}
 
 	clear();
@@ -202,21 +209,16 @@ void ExampleTriangleGeometry::updateData()
 			std::cout << "#### WARNING! face.mNumIndices != 3, but " << face.mNumIndices << std::endl;
 		}
 
-		const unsigned indexA = face.mIndices[0];
-		const unsigned indexB = face.mIndices[1];
-		const unsigned indexC = face.mIndices[2];
+		auto setTriangleVertex = [&p](unsigned vertexIndex){
+			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].x;
+			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].y;
+			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].z;
+			updateBounds(p-3);
+		};
 
-		*p++ = scene->mMeshes[0]->mVertices[indexA].x;
-		*p++ = scene->mMeshes[0]->mVertices[indexA].y;
-		*p++ = scene->mMeshes[0]->mVertices[indexA].z;
-
-		*p++ = scene->mMeshes[0]->mVertices[indexB].x;
-		*p++ = scene->mMeshes[0]->mVertices[indexB].y;
-		*p++ = scene->mMeshes[0]->mVertices[indexB].z;
-
-		*p++ = scene->mMeshes[0]->mVertices[indexC].x;
-		*p++ = scene->mMeshes[0]->mVertices[indexC].y;
-		*p++ = scene->mMeshes[0]->mVertices[indexC].z;
+		setTriangleVertex(face.mIndices[0]);
+		setTriangleVertex(face.mIndices[1]);
+		setTriangleVertex(face.mIndices[2]);
 	}
 
     setVertexData(v);
