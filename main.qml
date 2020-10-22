@@ -32,8 +32,12 @@ Window {
             clipNear: 0.1
             clipFar: 1000.0
             x: 0
-            y: 0
-            z: 200
+            y: -75
+            z: 50
+
+            onRotationChanged: {
+                console.log(" camera eulerRotation: " + eulerRotation)
+            }
         }
 
         DirectionalLight {
@@ -64,6 +68,8 @@ Window {
         }
 
         Model {
+            id: triangleModel
+            property alias geometry: triangleModel.geometry
             visible: radioCustGeom.checked
             scale: Qt.vector3d(1, 1, 1)
             geometry: ExampleTriangleGeometry {
@@ -71,8 +77,15 @@ Window {
                 normalXY: sliderNorm.value
                 uv: cbUV.checked
                 uvAdjust: sliderUV.value
+                warp: modelWarpSlider.value
+
+                onBoundsChanged: {
+                    console.log(" model bounds min: " + triangleModel.geometry.minBounds)
+                    console.log(" model bounds max: " + triangleModel.geometry.maxBounds)
+                    console.log(" modelCenter : " + modelCenter)
+                }
             }
-//            source: "#Sphere"
+
             materials: [
                 DefaultMaterial {
                     Texture {
@@ -89,7 +102,8 @@ Window {
         Model {
             visible: radioPointGeom.checked
             scale: Qt.vector3d(100, 100, 100)
-            geometry: ExamplePointGeometry { }
+            geometry: ExamplePointGeometry {
+            }
             materials: [
                 DefaultMaterial {
                     lighting: DefaultMaterial.NoLighting
@@ -105,11 +119,26 @@ Window {
         controlledObject: camera
     }
 
+
+    MouseArea {
+        anchors.fill: parent
+        onDoubleClicked: {
+            onPositionChanged: {
+                var modelCenter = triangleModel.geometry.minBounds.plus(triangleModel.geometry.maxBounds).times(0.5)
+                camera.lookAt(modelCenter)
+
+//                var eulerRotation = camera.eulerRotation
+//                camera.setEulerRotation(Qt.vector3d(eulerRotation.x,0,eulerRotation.z))
+            }
+        }
+    }
+
     Slider {
+        id: modelWarpSlider
         anchors.left: parent
         orientation: Qt.Vertical
-        from: -1
-        to: 1
+        from: -0.05
+        to: 0.05
         width: 50
     }
 }

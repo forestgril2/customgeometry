@@ -19,8 +19,8 @@ static bool isAssimpReadDone = false;
 // Create an instance of the Importer class
 static Assimp::Importer importer;
 static const aiScene* scene;
-static QVector3D maxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-static QVector3D minBound(FLT_MAX, FLT_MAX, FLT_MAX);
+static aiVector3D maxBound(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+static aiVector3D minBound(FLT_MAX, FLT_MAX, FLT_MAX);
 
 void assimpErrorLogging(const std::string&& pError)
 {
@@ -36,20 +36,20 @@ static void assimpLogScene(const aiScene* scene)
 
 void updateBounds(const float* vertexMatrixXCoord)
 {
-	minBound.setX(std::min(minBound.x(), *vertexMatrixXCoord));
-	maxBound.setX(std::max(maxBound.x(), *vertexMatrixXCoord));
+	minBound.x = (std::min(minBound.x, *vertexMatrixXCoord));
+	maxBound.x = (std::max(maxBound.x, *vertexMatrixXCoord));
 	++vertexMatrixXCoord;
-	minBound.setY(std::min(minBound.y(), *vertexMatrixXCoord));
-	maxBound.setY(std::max(maxBound.y(), *vertexMatrixXCoord));
+	minBound.y = (std::min(minBound.y, *vertexMatrixXCoord));
+	maxBound.y = (std::max(maxBound.y, *vertexMatrixXCoord));
 	++vertexMatrixXCoord;
-	minBound.setZ(std::min(minBound.z(), *vertexMatrixXCoord));
-	maxBound.setZ(std::max(maxBound.z(), *vertexMatrixXCoord));
+	minBound.z = (std::min(minBound.z, *vertexMatrixXCoord));
+	maxBound.z = (std::max(maxBound.z, *vertexMatrixXCoord));
 }
 
 void logBounds()
 {
-	std::cout << " ### aiScene minBound(x,y,z): [" << minBound.x() << "," << minBound.y() << "," << minBound.z() << "]" << std::endl;
-	std::cout << " ### aiScene maxBound(x,y,z): [" << maxBound.x() << "," << maxBound.y() << "," << maxBound.z() << "]" << std::endl;
+	std::cout << " ### aiScene minBound(x,y,z): [" << minBound.x << "," << minBound.y << "," << minBound.z << "]" << std::endl;
+	std::cout << " ### aiScene maxBound(x,y,z): [" << maxBound.x << "," << maxBound.y << "," << maxBound.z << "]" << std::endl;
 }
 
 static void assimpReadMeshBounds(const aiScene* scene, const unsigned meshIndex = 0u)
@@ -147,6 +147,36 @@ void ExampleTriangleGeometry::setWarp(float warp)
     update();
 }
 
+void ExampleTriangleGeometry::setBounds(const QVector3D& min, const QVector3D& max)
+{
+	QQuick3DGeometry::setBounds(min, max);
+
+	minBound = {min.x(), min.y(), min.z()};
+	maxBound = {max.x(), max.y(), max.z()};
+
+	emit boundsChanged();
+}
+
+void ExampleTriangleGeometry::setMinBounds(const QVector3D& minBounds)
+{
+	setBounds(minBounds, maxBounds());
+}
+
+void ExampleTriangleGeometry::setMaxBounds(const QVector3D& maxBounds)
+{
+	setBounds(minBounds(), maxBounds);
+}
+
+QVector3D ExampleTriangleGeometry::minBounds() const
+{
+	return QVector3D(minBound.x, minBound.y, minBound.z);
+}
+
+QVector3D ExampleTriangleGeometry::maxBounds() const
+{
+	return QVector3D(maxBound.x, maxBound.y, maxBound.z);
+}
+
 void ExampleTriangleGeometry::updateData()
 {
 	if (!isAssimpReadDone)
@@ -155,6 +185,7 @@ void ExampleTriangleGeometry::updateData()
 			return;
 
 		assimpLogScene(scene);
+		setBounds({minBound.x, minBound.y, minBound.z}, {maxBound.x, maxBound.y,maxBound.z});
 	}
 
 	clear();
@@ -200,6 +231,8 @@ void ExampleTriangleGeometry::updateData()
 
 // a triangle, front face = counter-clockwise
 
+	std::cout << "#### Warp = " << _warp;
+
 	for (unsigned i = 0; i < numMeshFaces; ++i)
 	{
 		const aiFace& face = scene->mMeshes[0]->mFaces[i];
@@ -209,10 +242,13 @@ void ExampleTriangleGeometry::updateData()
 			std::cout << "#### WARNING! face.mNumIndices != 3, but " << face.mNumIndices << std::endl;
 		}
 
-		auto setTriangleVertex = [&p](unsigned vertexIndex){
-			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].x;
-			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].y;
-			*p++ = scene->mMeshes[0]->mVertices[vertexIndex].z;
+		const aiVector3D boundDiff = maxBound-minBound;
+
+		auto setTriangleVertex = [this, &p, &boundDiff](unsigned vertexIndex) {
+			const aiVector3D vertex = scene->mMeshes[0]->mVertices[vertexIndex];
+			*p++ = vertex.x + _warp*boundDiff.x*sin(vertex.z);
+			*p++ = vertex.y;
+			*p++ = vertex.z;
 			updateBounds(p-3);
 		};
 
@@ -220,6 +256,7 @@ void ExampleTriangleGeometry::updateData()
 		setTriangleVertex(face.mIndices[1]);
 		setTriangleVertex(face.mIndices[2]);
 	}
+	setBounds({minBound.x, minBound.y, minBound.z}, {maxBound.x, maxBound.y,maxBound.z});
 
     setVertexData(v);
     setStride(stride);
@@ -241,9 +278,6 @@ void ExampleTriangleGeometry::updateData()
                      m_hasNormals ? 6 * sizeof(float) : 3 * sizeof(float),
                      QQuick3DGeometry::Attribute::F32Type);
     }
-
-    std::cout << " ########## DATA UPDATE IN " << __FUNCTION__ << std::endl;
-    isAssimpReadDone = true;
 }
 
 ExamplePointGeometry::ExamplePointGeometry()
