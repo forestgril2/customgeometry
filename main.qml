@@ -123,13 +123,29 @@ Window {
     MouseArea {
         anchors.fill: parent
         onDoubleClicked: {
-            onPositionChanged: {
-                var modelCenter = triangleModel.geometry.minBounds.plus(triangleModel.geometry.maxBounds).times(0.5)
-                camera.lookAt(modelCenter)
+            var modelCenter = triangleModel.geometry.minBounds.plus(triangleModel.geometry.maxBounds).times(0.5)
+            camera.lookAt(modelCenter)
 
-//                var eulerRotation = camera.eulerRotation
-//                camera.setEulerRotation(Qt.vector3d(eulerRotation.x,0,eulerRotation.z))
-            }
+            //               var eulerRotation = camera.eulerRotation
+            //                camera.setEulerRotation(Qt.vector3d(eulerRotation.x,0,eulerRotation.z))
+
+            var dir = (modelCenter.minus(camera.position)).normalized()
+            var up = Qt.vector3d(0,0,1)
+            var hor = (up.crossProduct(dir)).normalized()
+            up = (dir.crossProduct(hor)).normalized()
+
+            // hor.x hor.y hor.z
+            // up.x  up.y  up.z
+            // dir.x dir.y dir.z
+
+            var qw = Math.sqrt(1+hor.x + up.y + dir.z)/2
+            var qx = (up.z - dir.y)/(4 * qw)
+            var qy = (dir.x - hor.z)/(4 * qw)
+            var qz = (hor.y - up.x)/(4 * qw)
+
+//            console.log("camera.rotation: " + camera.rotation);
+
+            camera.rotation = Qt.quaternion(qw,qx,qy,qz)
         }
     }
 

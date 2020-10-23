@@ -3,6 +3,7 @@
 
 #include <QQuick3DGeometry>
 #include <QVector3D>
+#include <QQuaternion>
 #include <qqml.h>
 
 class ExampleTriangleGeometry : public QQuick3DGeometry
@@ -20,6 +21,8 @@ class ExampleTriangleGeometry : public QQuick3DGeometry
 
 public:
     ExampleTriangleGeometry();
+
+    Q_INVOKABLE QQuaternion getRotation()
 
     bool normals() const { return m_hasNormals; }
     void setNormals(bool enable);

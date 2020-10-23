@@ -2,6 +2,7 @@
 
 #include <QRandomGenerator>
 #include <QVector3D>
+#include <QQuaternion>
 
 #include <cstdio>
 #include <iostream>
@@ -231,8 +232,6 @@ void ExampleTriangleGeometry::updateData()
 
 // a triangle, front face = counter-clockwise
 
-	std::cout << "#### Warp = " << _warp;
-
 	for (unsigned i = 0; i < numMeshFaces; ++i)
 	{
 		const aiFace& face = scene->mMeshes[0]->mFaces[i];
@@ -246,7 +245,7 @@ void ExampleTriangleGeometry::updateData()
 
 		auto setTriangleVertex = [this, &p, &boundDiff](unsigned vertexIndex) {
 			const aiVector3D vertex = scene->mMeshes[0]->mVertices[vertexIndex];
-			*p++ = vertex.x + _warp*boundDiff.x*sin(vertex.z);
+			*p++ = vertex.x + _warp*boundDiff.x*sin(vertex.z/2);
 			*p++ = vertex.y;
 			*p++ = vertex.z;
 			updateBounds(p-3);
