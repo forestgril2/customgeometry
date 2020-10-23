@@ -24,7 +24,7 @@ static aiVector3D minBound(FLT_MAX, FLT_MAX, FLT_MAX);
 
 void assimpErrorLogging(const std::string&& pError)
 {
-	std::cout << pError << std::endl;
+	std::cout << __FUNCTION__ << " : " << pError << std::endl;
 }
 
 static void assimpLogScene(const aiScene* scene)
@@ -181,7 +181,7 @@ void ExampleTriangleGeometry::updateData()
 {
 	if (!isAssimpReadDone)
 	{
-		if (!DoTheImportThing("C:/ProjectsData/stl_files/mandoblasterlow.stl"))
+		if (!DoTheImportThing("C:/ProjectsData/stl_files/mandorifle.stl"))
 			return;
 
 		assimpLogScene(scene);
